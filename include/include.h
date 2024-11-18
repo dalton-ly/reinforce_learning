@@ -1,14 +1,17 @@
+#include "matplotlibcpp.h"
 #include <Eigen/Dense>
 #include <Eigen/src/Core/Matrix.h>
 #include <Eigen/src/Core/Reverse.h>
 #include <iomanip>
 #include <iostream>
 #include <utility>
+
 #include <vector>
 using namespace std;
 using namespace Eigen;
+namespace plt = matplotlibcpp;
 
-using Actions          = vector<pair<int, int>>;
+using Actions = vector<pair<int, int>>;
 // 定义状态类型
 enum StateType { NORMAL, FORBIDDEN, TARGET };
 
@@ -40,16 +43,20 @@ inline string getArrow(int i_row, int i_col, int j_row, int j_col) {
     int col_diff = j_col - i_col;
 
     // Vertical and horizontal movement
-    if (row_diff == 0 && col_diff > 0) return "→"; // Right
-    if (row_diff == 0 && col_diff < 0) return "←"; // Left
-    if (row_diff > 0 && col_diff == 0) return "↓"; // Down
-    if (row_diff < 0 && col_diff == 0) return "↑"; // Up
+    if (row_diff == 0 && col_diff > 0)
+        return "→"; // Right
+    if (row_diff == 0 && col_diff < 0)
+        return "←"; // Left
+    if (row_diff > 0 && col_diff == 0)
+        return "↓"; // Down
+    if (row_diff < 0 && col_diff == 0)
+        return "↑"; // Up
 
     return " "; // No movement (if they are the same)
 }
 
-inline void drawMatrixMovement(const MatrixXd& P) {
-    const int N = 5; // 5x5 matrix size
+inline void drawMatrixMovement(const MatrixXd &P) {
+    const int              N = 5;                             // 5x5 matrix size
     vector<vector<string>> matrix(N, vector<string>(N, " ")); // 5x5 grid for display
 
     // Iterate over the 25x25 matrix P

@@ -1,4 +1,5 @@
 #include "include.h"
+#include <vector>
 
 static const int    gridSize  = 5;                   // 网格大小 (5x5)
 static const int    numStates = gridSize * gridSize; // 总状态数
@@ -99,18 +100,20 @@ static VectorXd iterativeSolution(const MatrixXd &P, const VectorXd &r, int maxI
     return v;
 }
 
-VectorXd valueIteration(Actions acts, const vector<vector<StateType>> &grid, double GAMMA, int NUM_STATES,
-                  config config = {-1, -1, 1, 0}, int maxIterations = 2000,
-                  double tolerance = 1e-6) {
+pair<VectorXd, vector<double>> valueIteration(Actions acts, const vector<vector<StateType>> &grid,
+                                              double GAMMA, int NUM_STATES,
+                                              config config     = {-1, -1, 1, 0},
+                                              int maxIterations = 2000, double tolerance = 1e-3) {
 
-    VectorXd r(NUM_STATES); // immediate return vector
-    VectorXd v(NUM_STATES);
-    MatrixXd P(NUM_STATES, NUM_STATES);
+    vector<double> statevalue;
+    VectorXd       r(NUM_STATES); // immediate return vector
+    VectorXd       v(NUM_STATES);
+    MatrixXd       P(NUM_STATES, NUM_STATES);
     v.setZero();
     r.setZero();
     MatrixXd QSA(NUM_STATES, acts.size());
     for (int k = 0; k < maxIterations; k++) {
-
+        statevalue.emplace_back(v(4));
         for (int i = 0; i < NUM_STATES; i++) {
             for (int j = 0; j < acts.size(); j++) {
                 auto [offsetx, offsety] = acts[j];
@@ -181,12 +184,12 @@ VectorXd valueIteration(Actions acts, const vector<vector<StateType>> &grid, dou
         if ((vNext - v).norm() < tolerance) {
             cout << "Converged after " << k + 1 << " iterations." << endl;
             drawMatrixMovement(P);
-            return vNext;
+            return {vNext, statevalue};
         }
         v = vNext;
     }
     cout << "Reached maximum iterations without convergence." << endl;
-    return v;
+    return {v, statevalue};
 }
 
 int hw1_test() {
@@ -221,26 +224,26 @@ int hw1_test() {
     cout << "using value iteration algorithm to solve bellman optimality equation" << endl;
     // 2.1 3*1 world
     cout << "solve in : 1x3 Grid world, gamma: 0.9" << endl << endl;
-    auto ans1_3 = valueIteration(acts3_1, grid3_1, 0.9, 3);
+    auto [ans1_3, _] = valueIteration(acts3_1, grid3_1, 0.9, 3);
     cout << ans1_3.transpose() << endl << endl << endl;
 
     cout << "solve in : 5x5 Grid world, gamma: 0.9" << endl << endl;
-    auto            ans = valueIteration(acts, grid, 0.9, numStates);
+    auto            ans = valueIteration(acts, grid, 0.9, numStates).first;
     Eigen::MatrixXd m   = Eigen::Map<Eigen::MatrixXd>(ans.data(), 5, 5);
     cout << m.transpose() << endl << endl;
 
     cout << "solve in : 5x5 Grid world, gamma: 0.5" << endl << endl;
-    ans = valueIteration(acts, grid, 0.5, numStates);
+    ans = valueIteration(acts, grid, 0.5, numStates).first;
     m   = Eigen::Map<Eigen::MatrixXd>(ans.data(), 5, 5);
     cout << m.transpose() << endl << endl;
 
     cout << "solve in : 5x5 Grid world, gamma: 0" << endl << endl;
-    ans = valueIteration(acts, grid, 0, numStates);
+    ans = valueIteration(acts, grid, 0, numStates).first;
     m   = Eigen::Map<Eigen::MatrixXd>(ans.data(), 5, 5);
     cout << m.transpose() << endl << endl;
 
     cout << "solve in : 5x5 Grid world, gamma: 0.9,  rforbidden = -10" << endl << endl;
-    ans = valueIteration(acts, grid, 0.9, numStates, config{-10, -1, 1, 0});
+    ans = valueIteration(acts, grid, 0.9, numStates, config{-10, -1, 1, 0}).first;
     m   = Eigen::Map<Eigen::MatrixXd>(ans.data(), 5, 5);
     cout << m.transpose() << endl << endl;
 
@@ -248,7 +251,7 @@ int hw1_test() {
             "rotherstep = 1"
          << endl
          << endl;
-    ans = valueIteration(acts, grid, 0.9, numStates, config{0, 0, 2, 1});
+    ans = valueIteration(acts, grid, 0.9, numStates, config{0, 0, 2, 1}).first;
     m   = Eigen::Map<Eigen::MatrixXd>(ans.data(), 5, 5);
     cout << m.transpose() << endl << endl;
 
