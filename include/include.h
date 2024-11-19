@@ -1,15 +1,15 @@
-#include "matplotlibcpp.h"
+// #include "matplotlibcpp.h"
 #include <Eigen/Dense>
 #include <Eigen/src/Core/Matrix.h>
 #include <Eigen/src/Core/Reverse.h>
 #include <iomanip>
 #include <iostream>
 #include <utility>
-
+#include <matplot/matplot.h>
 #include <vector>
 using namespace std;
 using namespace Eigen;
-namespace plt = matplotlibcpp;
+// namespace plt = matplotlibcpp;
 
 using Actions = vector<pair<int, int>>;
 // 定义状态类型
