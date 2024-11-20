@@ -5,8 +5,8 @@
 #include <iomanip>
 #include <iostream>
 #include <utility>
-#include <matplot/matplot.h>
 #include <vector>
+
 using namespace std;
 using namespace Eigen;
 // namespace plt = matplotlibcpp;

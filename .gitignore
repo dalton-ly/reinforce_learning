@@ -2,3 +2,7 @@
 build
 test_tqdm
 .matplotplusplus
+*.csv
+*.pyc
+*.png
+python_version

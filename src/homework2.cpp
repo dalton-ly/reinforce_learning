@@ -3,11 +3,14 @@
 #include <Eigen/src/Core/Matrix.h>
 #include <algorithm>
 #include <ctime>
+#include <filesystem>
+#include <fstream>
 #include <random>
+#include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
-
+namespace fs                  = std::filesystem;
 static const int    gridSize  = 5;                   // 网格大小 (5x5)
 static const int    numStates = gridSize * gridSize; // 总状态数
 static const double _gamma    = 0.9;                 // 折扣因子
@@ -164,101 +167,6 @@ strategyIteration(Actions acts, const vector<vector<StateType>> &grid, double GA
     return {v, statevalue};
 }
 
-// void plot_vectors(const vector<double> v1, const vector<double> v2,
-//                   const vector<double> v3) {
-//     // 获取最大的长度，确保所有的vector都能匹配
-//     size_t max_len = max({v1.size(), v2.size(), v3.size()});
-
-//     // 填充至20个点
-//     const size_t num_points = 30;
-
-//     vector<double> x(num_points);
-//     for (size_t i = 0; i < num_points; ++i) {
-//         x[i] = i;
-//     }
-
-//     auto fill_or_truncate = [max_len](const vector<double> &v) {
-//         vector<double> result(num_points, 0.0);
-//         size_t              len = v.size();
-//         for (size_t i = 0; i < num_points; ++i) {
-//             if (i < len) {
-//                 result[i] = v[i];
-//             } else {
-//                 result[i] = v[len - 1]; // 填充最后一个值
-//             }
-//         }
-//         return result;
-//     };
-
-//     // 填充数据
-//     auto v1_filled = fill_or_truncate(v1);
-//     auto v2_filled = fill_or_truncate(v2);
-//     auto v3_filled = fill_or_truncate(v3);
-
-//     // 绘制图形
-//     plt::plot(x, v1_filled, {{"label", "value iteration"}});
-//     plt::plot(x, v2_filled, {{"label", "policy iteration"}});
-//     plt::plot(x, v3_filled, {{"label", "truncated policy iteration"}});
-
-//     // 设置标题和标签
-//     plt::title("Plot of Vectors");
-//     plt::xlabel("Index");
-//     plt::ylabel("Value");
-
-//     // 添加图例
-//     plt::legend();
-//     // plt::save("output.png"); // 保存图像到文件
-//     // // 显示图形
-//     plt::show();
-// }
-
-void plot_three_series(const vector<double> &y1, const vector<double> &y2, const vector<double> &y3,
-                       string_view _title = "Three Series Plot", string_view x_label = "Index",
-                       string_view y_label = "Value") {
-    using namespace matplot;
-
-    // 确保每个 vector 至少有 20 个数据点，不足的用最后一个数据填充
-    auto pad_vector = [](const vector<double> &vec, size_t length) {
-        vector<double> padded_vec = vec;
-        if (padded_vec.size() < length) {
-            double last_value = padded_vec.back();
-            padded_vec.resize(length, last_value);
-        }
-        return padded_vec;
-    };
-
-    // 生成对应的 x 数据
-    vector<double> x1(20), x2(20), x3(20);
-    iota(x1.begin(), x1.end(), 0); // x1 = [0, 1, ..., 19]
-    iota(x2.begin(), x2.end(), 0); // x2 = [0, 1, ..., 19]
-    iota(x3.begin(), x3.end(), 0); // x3 = [0, 1, ..., 19]
-
-    // 填充数据
-    vector<double> padded_y1 = pad_vector(y1, 20);
-    vector<double> padded_y2 = pad_vector(y2, 20);
-    vector<double> padded_y3 = pad_vector(y3, 20);
-
-    // 创建图表
-    auto fig = figure();
-
-    // 绘制三组数据
-    plot(x1, padded_y1, "-o")->line_width(2).color("red").marker_size(8).display_name("Series 1");
-    hold(on);
-    plot(x2, padded_y2, "-x")->line_width(2).color("blue").marker_size(8).display_name("Series 2");
-    plot(x3, padded_y3, "-s")->line_width(2).color("green").marker_size(8).display_name("Series 3");
-
-    // 添加图例
-    legend();
-
-    // 设置标题和标签
-    title(_title);
-    xlabel(x_label);
-    ylabel(y_label);
-
-    // 显示图表
-    show();
-}
-
 // ε-贪心策略选择动作 最大的概率选择q-value最大对应的动作
 int epsilon_greedy(const vector<double> &q_values, double EPSILON, int ACTIONS) {
     uniform_real_distribution<double> dist(0.0, 1.0);
@@ -303,17 +211,19 @@ MatrixXd MC_Greedy(Actions acts, const vector<vector<StateType>> &grid,
     // Q(x,y)保存坐标为x,y的对应的每个动作
 
     // 开始生成episode
-    tqdm bar;
-    for (int episode=0;episode<EPISODES;episode++) {
+    tqdm                        bar;
+    vector<vector<vector<int>>> visit_count(5, vector<vector<int>>(5, vector<int>(5, 0)));
+    for (int episode = 0; episode < EPISODES; episode++) {
         bar.progress(episode, EPISODES);
         // cout << " episode: " << episode << endl;
         // 记录轨迹
         vector<tuple<int, int, int, double>> episode_data; // 在(x,y)处选择的action以及对应的回报
         int x = rng() % gridSize;
         int y = rng() % gridSize;
-
+        // int a = rng() % 5;
+        // int x=0,y=0;
         int steps = 0;
-        while (steps < MAX_STEPS) {
+        while (steps < MAX_STEPS ) {
             // if (steps % 10000 == 0) {
             //     cout << " steps: " << steps << endl;
             // }
@@ -328,7 +238,6 @@ MatrixXd MC_Greedy(Actions acts, const vector<vector<StateType>> &grid,
             steps++;
         }
 
-        vector<vector<vector<int>>> visit_count(5, vector<vector<int>>(5, vector<int>(5, 0)));
         // 累计回报
         double G = 0.0;
         std::reverse(episode_data.begin(), episode_data.end());
@@ -345,28 +254,67 @@ MatrixXd MC_Greedy(Actions acts, const vector<vector<StateType>> &grid,
             int count = visit_count[sx][sy][a];
 
             // 增量更新 Q 值
-            Q[sx][sy][a] += (G - Q[sx][sy][a]) / count;
+            Q[sx][sy][a] += (G - Q[sx][sy][a]) /(double) count;
         }
     }
+    // 保存为 CSV 文件
+    fs::path current_path = fs::current_path();         // 当前工作目录
+    fs::path parent_path  = current_path.parent_path(); // 上级目录
+
+    // 构建文件路径
+    string outputfilename = (parent_path / "data" / to_string(EPSILON) /
+                             ("visit_count_" + to_string(MAX_STEPS) + ".csv"))
+                                .string();
+    ofstream outfile(outputfilename);
+    for (int x = 0; x < 5; ++x) {
+        for (int y = 0; y < 5; ++y) {
+            for (int a = 0; a < 5; ++a) {
+                outfile << visit_count[x][y][a];
+                if (a < 4)
+                    outfile << ","; // 不同动作用逗号分隔
+            }
+            outfile << "\n"; // 每行对应一个 (x, y) 点
+        }
+    }
+    outfile.close();
+
     // 根据 ε-贪心策略计算状态值矩阵
     MatrixXd statevalue(5, 5);
     statevalue.setZero();
+
+    string best_action_name =
+        (parent_path / "data" / ("best_action_of" + to_string(EPSILON) + ".csv")).string();
+    string state_val =
+        (parent_path / "data" / ("state_value_of" + to_string(EPSILON) + ".csv")).string();
+
+    ofstream out(best_action_name);
+    ofstream outstate_val(state_val);
+
     for (int x = 0; x < gridSize; ++x) {
         for (int y = 0; y < gridSize; ++y) {
             // 找到 Q(x, y, a) 中的最优动作的索引
             int best_action =
                 distance(Q[x][y].begin(), max_element(Q[x][y].begin(), Q[x][y].end()));
-
+            out << best_action;
             // 计算状态值 V(s) = ∑ π(a|s) Q(s, a)
             double state_value = 0.0;
             for (int a = 0; a < 5; ++a) {
                 double pi_a_s = (a == best_action) ? (1 - EPSILON + EPSILON / 5) : (EPSILON / 5);
                 state_value += pi_a_s * Q[x][y][a];
             }
-
             statevalue(x, y) = state_value;
+            outstate_val << state_value;
+            if (y < 4) {
+                out << ",";
+                outstate_val << ",";
+            }
         }
+        out << "\n";
+        outstate_val << "\n";
     }
+    out.close();
+    outstate_val.close();
+
     return statevalue;
 }
 
@@ -376,20 +324,10 @@ void compare_methods() {
     Eigen::MatrixXd m         = Eigen::Map<Eigen::MatrixXd>(ans_value.data(), 5, 5);
     cout << m.transpose() << endl << endl;
 
-    for (auto v : s_value) {
-        cout << v << " ";
-    }
-    cout << endl;
-
     cout << "policy iteration: " << endl << endl;
     auto [ans_policy, s_policy] = strategyIteration(acts, grid, 0.9, numStates, award);
     m                           = Eigen::Map<Eigen::MatrixXd>(ans_policy.data(), 5, 5);
     cout << m.transpose() << endl << endl;
-
-    for (auto v : s_policy) {
-        cout << v << " ";
-    }
-    cout << endl;
 
     int iteration_times = 2;
     cout << "truncated policy iteration: " << endl << endl;
@@ -398,18 +336,34 @@ void compare_methods() {
     m = Eigen::Map<Eigen::MatrixXd>(ans_truncated.data(), 5, 5);
     cout << m.transpose() << endl << endl;
 
-    for (auto v : s_truncated) {
-        cout << v << " ";
+    // 保存 s_value 到文件
+    std::ofstream value_file("s_value.txt");
+    for (auto v : s_value) {
+        value_file << v << " ";
     }
-    cout << endl;
-    // plot_vectors(s_value, s_policy, s_truncated);
-    plot_three_series(s_value, s_policy, s_truncated);
+    value_file.close();
+
+    // 保存 s_policy 到文件
+    std::ofstream policy_file("s_policy.txt");
+    for (auto v : s_policy) {
+        policy_file << v << " ";
+    }
+    policy_file.close();
+
+    // 保存 s_truncated 到文件
+    std::ofstream truncated_file("s_truncated.txt");
+    for (auto v : s_truncated) {
+        truncated_file << v << " ";
+    }
+    truncated_file.close();
 }
 
 void compare_iter_times() {
+
     vector<int>            times{1, 5, 9, 56};
     const double           optimal = 5.31441;
     vector<vector<double>> statevalues;
+
     for (int iteration_times : times) {
         cout << "truncated policy iteration, truncate at " << iteration_times << " : " << endl
              << endl;
@@ -419,19 +373,34 @@ void compare_iter_times() {
         cout << m.transpose() << endl << endl;
         statevalues.emplace_back(s_truncated);
     }
+
+    // 保存 statevalues 到文件
+    std::ofstream statevalues_file("statevalues.txt");
+    for (const auto &s_truncated : statevalues) {
+        for (auto v : s_truncated) {
+            statevalues_file << v << " ";
+        }
+        statevalues_file << "\n";
+    }
+    statevalues_file.close();
 }
 
 void test_MC_greedy() {
     vector<vector<int>> policy(5, vector<int>(5, 0));
     int                 left = 0, up = 1, right = 2, down = 3, stay = 4;
-    policy         = {{left, left, left, left, down},
-                      {up, up, right, right, down},
-                      {up, left, down, right, down},
-                      {up, right, stay, left, down},
-                      {up, right, up, left, left}};
-    double epsilon = 0.5;
-    auto   result  = MC_Greedy(acts, grid, policy, _gamma, epsilon,1e6,1e3);
-    cout << result << endl;
+    policy = {{left, left, left, left, down},
+              {up, up, right, right, down},
+              {up, left, down, right, down},
+              {up, right, stay, left, down},
+              {up, right, up, left, left}};
+    // double epsilon = 0.5;
+    // for (int steps : vector<int>{100, 1000, 10000, 1000000}) {
+    //     auto result = MC_Greedy(acts, grid, policy, _gamma, epsilon, steps, 3);
+    // }
+    // cout << result << endl;
+    for (double epsilon : vector<double>{0.0, 0.1, 0.2, 0.5}) {
+        MC_Greedy(acts, grid, policy, _gamma, epsilon, 1e5, 10000);
+    }
 }
 
 int hw2_test() {
