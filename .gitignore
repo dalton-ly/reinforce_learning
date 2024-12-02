@@ -5,3 +5,4 @@ test_tqdm
 *.pyc
 *.png
 python_version
+.cache
